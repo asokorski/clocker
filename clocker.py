@@ -38,32 +38,38 @@ def save_log(log_type, comment):
         VALUES (?, ?, ?, ?, ?, ?) """, (log_type, datetime_str, date_str, day_of_week, time_str, comment))
     print(f"Log: '{log_type} {date_str} {day_of_week} {time_str} {comment}' saved!\n")
 
-def sprint_mode():
+def sprint_mode(): #counter and bell sound to be added, possibly to be merged with slowmode
     while True:
         decision = input(""">>SPRINT MODE<<
         i:          Clocking in
         o:          Clocking out
         back:       Back to the previous menu
     Type the shortcut for the event: """).lower()
-        if decision in ('i', 'o'):
+        if decision == 'i':
             comment = input("Comment: ")
-            save_log(decision, comment)
+            save_log('in', comment)
+        elif decision == 'o':
+            comment = input("Comment: ")
+            save_log('out', comment)
         elif decision == 'back':
             print('')
             break
         else:
             print('Invalid option\n')
          
-def slow_mode():
+def slow_mode(): #counter and bell sound to be added, possibly to be merged with sprintmode
     while True:
         decision = input(""">>SLOW MODE<<
         i:          Clocking in
         o:          Clocking out
         back:       Back to the previous menu
     Type the shortcut for the event: """).lower()
-        if decision in ('i', 'o'):
+        if decision == 'i':
             comment = input("Comment: ")
-            save_log(decision, comment)
+            save_log('in', comment)
+        elif decision == 'o':
+            comment = input("Comment: ")
+            save_log('out', comment)
         elif decision == 'back':
             print('')
             break
@@ -71,7 +77,31 @@ def slow_mode():
             print('Invalid option\n')
 
 def statistics():
-    pass
+    while True:
+        decision = input(""">>STATISTICS<<
+        d:  total focus time for a given date
+        w:  total focus time for a given week
+        m:  total focus time for a given month
+Type the shortcut for the event: """).lower()
+        if decision == 'd':
+            input_date = input("""\nType in 'today' if you want to see the statistics for today or enter the date in DD-MM-YYYY format: """)
+            if input_date == 'today':
+                today = get_current_time().strftime('%Y-%m-%d')
+                with sqlite3.connect('clocker.db') as connection:
+                    cursor = connection.cursor()
+                    cursor.execute("""SELECT log_type, time FROM logs
+                    WHERE date = (?)""", (today,))
+                    all_today = cursor.fetchall()
+                    total_today = datetime.timedelta()
+                    for log in all_today:
+                        log_time = datetime.datetime.strptime(log[1], '%H:%M:%S')
+                        if log[0] == 'in':
+                            clock_in_time = log_time
+                        elif log[0] == 'out':
+                            total_today += log_time - clock_in_time
+                    hours, remainder = divmod(total_today.total_seconds(), 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    print(f'Total focus time for: {today} is {int(hours)} hours {int(minutes)} minutes {int(seconds)} seconds \n')
 
 def logs_menu():
     pass
@@ -108,20 +138,20 @@ while True:
 
 # Main menu
 while True:
-    mode = input(""" Choose mode:
-    sprint:     25min focus and 5 min break. When intensive focus is needed
-    slow:       1h15min focus and 15min break. For doing practice tasks
-    statistics: Shows total focus time for a given day / week / month / year
-    logs:       Browse through logs
+    mode = input(""" \n Choose mode:
+    s:          Sprint. 25min focus and 5 min break. When intensive focus is needed
+    l:          Slow. 1h15min focus and 15min break. For doing practice tasks
+    stat:       Statistics. Shows total focus time for a given day / week / month / year
+    log:        Browse through logs
     showlast:   Displays last log
     removelast: Removes last log
-    exit:       Closes the program
+    exit:       Closes the program \n
 Type the shortcut for the event: """).lower()
     modes = {
-        'sprint': sprint_mode, 
-        'slow': slow_mode, 
-        'statistics': statistics, 
-        'logs': logs_menu, 
+        's': sprint_mode, 
+        'l': slow_mode, 
+        'stat': statistics, 
+        'log': logs_menu, 
         'showlast': show_last, 
         'removelast': remove_last_log }
     if mode in modes:
