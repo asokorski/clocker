@@ -1,6 +1,8 @@
 import datetime
 import sqlite3
 import os
+from stats import total_time, date_input_validate
+from logs_menu import logs_menu
 
 def create_database():
     connection = sqlite3.connect('clocker.db')
@@ -11,6 +13,7 @@ def create_database():
     log_type TEXT NOT NULL,
     datetime DATETIME NOT NULL,
     date DATE NOT NULL,
+    week_number INTEGER NOT NULL,
     day_of_week TEXT NOT NULL,
     time TIME NOT NULL,
     comment TEXT);              
@@ -23,24 +26,47 @@ def create_database():
 def get_current_time(): #function to get the current date&time stamp without microseconds
     return datetime.datetime.now().replace(microsecond=0)
 
+def last_three_logs():
+    with sqlite3.connect('clocker.db') as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+SELECT log_type, datetime, comment FROM logs ORDER BY datetime DESC LIMIT 3;
+""")
+        last_three_logs = cursor.fetchall()
+    if len(last_three_logs) >= 3:
+        third_one = last_three_logs[2]
+        second_one = last_three_logs[1]
+        last_one = last_three_logs[0]
+        status = f"""Last 3 logs:
+            {third_one}
+            {second_one}
+        >>> {last_one} <<<"""
+        return status
+    else:
+        return ''
+
 #getting dates and time from get_current_time() function 
 #with .date(), time() methods to get only date or time in right data type and .strftime('%A') to get week day name in str data type
 #converting all the data to strings before storing as sqlite would convert it anyway, better do it here to make sure nothing gets mess up
 def save_log(log_type, comment):
     datetime_str = get_current_time().strftime('%Y-%m-%d %H:%M:%S')
     date_str = get_current_time().date().strftime('%Y-%m-%d')
+    week_number = get_current_time().date().isocalendar()[1]
     day_of_week = get_current_time().strftime('%A')
     time_str = get_current_time().time().strftime('%H:%M:%S')
     with sqlite3.connect('clocker.db') as connection:
         cursor = connection.cursor()
         cursor.execute("""
-        INSERT INTO logs (log_type, datetime, date, day_of_week, time, comment)
-        VALUES (?, ?, ?, ?, ?, ?) """, (log_type, datetime_str, date_str, day_of_week, time_str, comment))
-    print(f"Log: '{log_type} {date_str} {day_of_week} {time_str} {comment}' saved!\n")
+        INSERT INTO logs (log_type, datetime, date, week_number, day_of_week, time, comment)
+        VALUES (?, ?, ?, ?, ?, ?, ?) """, (log_type, datetime_str, date_str, week_number, day_of_week, time_str, comment))
+        connection.commit()
+    print(f"Log: '{log_type} {date_str} week:{week_number} {day_of_week} {time_str} {comment}' saved!")
 
 def sprint_mode(): #counter and bell sound to be added, possibly to be merged with slowmode
     while True:
-        decision = input(""">>SPRINT MODE<<
+        print('\n>>SPRINT MODE<<')
+        print(last_three_logs())
+        decision = input("""
         i:          Clocking in
         o:          Clocking out
         back:       Back to the previous menu
@@ -52,18 +78,20 @@ def sprint_mode(): #counter and bell sound to be added, possibly to be merged wi
             comment = input("Comment: ")
             save_log('out', comment)
         elif decision == 'back':
-            print('')
+            print('\nReturning to main menu')
             break
         else:
             print('Invalid option\n')
          
 def slow_mode(): #counter and bell sound to be added, possibly to be merged with sprintmode
     while True:
-        decision = input(""">>SLOW MODE<<
+        print('\n>>SLOW MODE<<')
+        print(last_three_logs())
+        decision = input("""
         i:          Clocking in
         o:          Clocking out
         back:       Back to the previous menu
-    Type the shortcut for the event: """).lower()
+Type the shortcut for the event: """).lower()
         if decision == 'i':
             comment = input("Comment: ")
             save_log('in', comment)
@@ -71,46 +99,52 @@ def slow_mode(): #counter and bell sound to be added, possibly to be merged with
             comment = input("Comment: ")
             save_log('out', comment)
         elif decision == 'back':
-            print('')
+            print('\nReturning to main menu')
             break
         else:
             print('Invalid option\n')
 
 def statistics():
     while True:
-        decision = input(""">>STATISTICS<<
-        d:  total focus time for a given date
-        w:  total focus time for a given week
-        m:  total focus time for a given month
+        decision = input("""\n>>STATISTICS<<
+        d:      Total focus time for a given date
+        w:      Total focus time for a given week
+        m:      Total focus time for a given month
+        back:   Back to the previous menu\n
 Type the shortcut for the event: """).lower()
-        if decision == 'd':
-            input_date = input("""\nType in 'today' if you want to see the statistics for today or enter the date in DD-MM-YYYY format: """)
-            if input_date == 'today':
-                today = get_current_time().strftime('%Y-%m-%d')
-                with sqlite3.connect('clocker.db') as connection:
-                    cursor = connection.cursor()
-                    cursor.execute("""SELECT log_type, time FROM logs
-                    WHERE date = (?)""", (today,))
-                    all_today = cursor.fetchall()
-                    total_today = datetime.timedelta()
-                    for log in all_today:
-                        log_time = datetime.datetime.strptime(log[1], '%H:%M:%S')
-                        if log[0] == 'in':
-                            clock_in_time = log_time
-                        elif log[0] == 'out':
-                            total_today += log_time - clock_in_time
-                    hours, remainder = divmod(total_today.total_seconds(), 3600)
-                    minutes, seconds = divmod(remainder, 60)
-                    print(f'Total focus time for: {today} is {int(hours)} hours {int(minutes)} minutes {int(seconds)} seconds \n')
-
-def logs_menu():
-    pass
-
-def show_last():
-    pass
+        if decision in ['d', 'w', 'm']:
+            total_time(date_input_validate(decision))
+        elif decision == 'back':
+            print('\nReturning to main menu')
+            return            
+        else:
+            print("\nInvalid option")
 
 def remove_last_log():
-    pass
+    while True:
+        with sqlite3.connect('clocker.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("""SELECT log_type, datetime, day_of_week, comment FROM logs ORDER BY datetime DESC LIMIT 1;""")
+            last_log = cursor.fetchone()
+        if not last_log:
+            print('\nNo logs to remove')
+            break
+        else:
+            print('\n>>REMOVE LAST LOG<<')
+            print(f'Last log: {last_log}')
+            remove_decision = input('Do you want to remove the last log y/n? ').lower()
+            if remove_decision == 'y':
+                with sqlite3.connect('clocker.db') as connection:
+                    cursor = connection.cursor()
+                    cursor.execute("""DELETE FROM logs WHERE datetime = (SELECT MAX(datetime) FROM logs);""")
+                    connection.commit()
+                print(f'Log {last_log} removed!')
+                break
+            elif remove_decision == 'n':
+                print('No logs removed')
+                break
+            else:
+                print('Invalid option\n')
 
 
 # CORE LOGIC:
@@ -138,50 +172,26 @@ while True:
 
 # Main menu
 while True:
-    mode = input(""" \n Choose mode:
+    print("\n>>MAIN MENU<<")
+    print(f'Current week: {get_current_time().date().isocalendar()[1]}')
+    print(last_three_logs())
+    mode = input("""\nChoose mode:
     s:          Sprint. 25min focus and 5 min break. When intensive focus is needed
     l:          Slow. 1h15min focus and 15min break. For doing practice tasks
-    stat:       Statistics. Shows total focus time for a given day / week / month / year
-    log:        Browse through logs
-    showlast:   Displays last log
-    removelast: Removes last log
+    stat:       Statistics. Shows total focus time for a given day / week / month
+    log:        Browse through logs, manually add or remove
+    rl:         Remove last log
     exit:       Closes the program \n
 Type the shortcut for the event: """).lower()
     modes = {
-        's': sprint_mode, 
-        'l': slow_mode, 
+        's':    sprint_mode, 
+        'l':    slow_mode, 
         'stat': statistics, 
-        'log': logs_menu, 
-        'showlast': show_last, 
-        'removelast': remove_last_log }
+        'log':  logs_menu, 
+        'rl':   remove_last_log}
     if mode in modes:
         modes[mode]()
     elif mode == "exit":
         exit(0)
     else:
         print("Incorrect input")
-
-
-
-
-
-
-
-#would be nide to open everything in a separate console since gonna use slow mode   
-#two modes - sprint mode and slow mode
-#logic that if it comes to midnight it will count the last sprint/slow from clock in up to midnight, and next from midnight to clockout
-#other option - when the time is within the range of midnight, and let's say 6 hours after it, it will ask if should flag the entry for the previous day
-
-
-
-
-# cursor.execute('SELECT * FROM logs')
-# all_logs = cursor.fetchall()
-# for log in all_logs:
-#     print(log)
-
-# INSERT INTO logs (log_type, datetime, date, day_of_week, time, comment)
-# VALUES ('Clock In', '2024-11-15 08:00:00', '2024-11-15', 'Wednesday', '08:00:00', 'Focus session');
-# DELETE FROM logs WHERE id = 1;
-# INSERT INTO logs (log_type, datetime, date, day_of_week, time, comment)
-# VALUES ('Clock Out', '2024-11-15 08:30:00', '2024-11-15', 'Wednesday', '08:30:00', 'Break started');
