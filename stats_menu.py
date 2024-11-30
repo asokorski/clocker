@@ -1,12 +1,31 @@
 import datetime
 import sqlite3
+from supporting_functions import get_current_time
 
-def get_current_time(): #function to get the current date&time stamp without microseconds
-    return datetime.datetime.now().replace(microsecond=0)
 
-def date_input_validate(date_type): #making sure that the correct input was entered depending on the chosen mode
+#menu for displaying statistics
+def statistics():
     while True:
-        if date_type == 'd':
+        decision = input("""\n>>STATISTICS<<\n
+        d:      Total focus time for a given date
+        w:      Total focus time for a given week
+        m:      Total focus time for a given month
+        back:   Back to the previous menu\n
+Type the shortcut for the event: """).lower()
+        if decision in ['d', 'w', 'm']:
+            total_time(date_input_validate(decision))
+        elif decision == 'back':
+            print('\nReturning to main menu')
+            return            
+        else:
+            print("\nInvalid option")
+
+
+#making sure that the correct input was entered depending on the chosen mode
+def date_input_validate(date_type):
+    while True:
+
+        if date_type == 'd': #validating 'today' and day date
             input_date = input("""\nType in 'today' or enter the date in YYYY-MM-DD format: """).lower()
             if input_date == 'today':
                 return 'today'
@@ -16,7 +35,8 @@ def date_input_validate(date_type): #making sure that the correct input was ente
                     return input_date
                 except ValueError:
                     print("\nIncorrect date format!")
-        elif date_type == 'w':
+
+        elif date_type == 'w': #validating week number
             week_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
             input_date = input("""\nEnter the week number: """).lower()
             try:
@@ -27,13 +47,15 @@ def date_input_validate(date_type): #making sure that the correct input was ente
                     print('\nIncorrect week number!')
             except ValueError:
                 print('\nIncorrect week number!')
-        elif date_type == 'm':
+
+        elif date_type == 'm': #validating month date
             input_date = input("""\nEnter the date in YYYY-MM format: """).lower()
             try:
                 datetime.datetime.strptime(input_date, '%Y-%m')
                 return input_date
             except ValueError:
                 print("\nIncorrect date format!")
+
 
 def total_time(input_date):
     #deciding what is the mode for the calculation and how to input into query
@@ -49,6 +71,7 @@ def total_time(input_date):
             query_mode = 'week'
         elif len(str(input_date)) == 7:
             query_mode = 'month'
+
 
 #total time calculating for 'today' or given day
     if query_mode == 'day':
@@ -87,6 +110,7 @@ def total_time(input_date):
             if (str(first_log[0])).strip().lower() == 'out':
                 total_focus +=  datetime.datetime.strptime(first_log[1], '%H:%M:%S') - midnight
 
+
 #total time calculating for a given week
     elif query_mode == 'week':
         with sqlite3.connect('clocker.db') as connection:
@@ -113,7 +137,7 @@ def total_time(input_date):
      
             #both midnight times needed later for calculations when logs start with 'out' or ends with 'in'
             #condition for having the first fetched log as 'out' to sum up time from midnight that day  
-            if all_logs_per_date[0][0].strip().lower() == 'out':
+            if all_logs_per_date[0][0].lower() == 'out':
                 first_date = all_logs_per_date[0][1].split(' ')[0]
                 midnight = datetime.datetime.strptime(f"{first_date} 00:00:00", '%Y-%m-%d %H:%M:%S')
                 total_focus += datetime.datetime.strptime(all_logs_per_date[0][1], '%Y-%m-%d %H:%M:%S') - midnight
@@ -124,7 +148,7 @@ def total_time(input_date):
                 before_midnight = datetime.datetime.strptime(f"{last_date} 23:59:59", '%Y-%m-%d %H:%M:%S')
                 total_focus += before_midnight - clock_in_time
 
-            time_period = ("week " + time_period) #changing variable for the "Total focus time for (...)" display message
+            time_period = ("week " + str(time_period)) #changing variable for the "Total focus time for (...)" display message
 
 #total time calculating for the given month
     elif query_mode == 'month':

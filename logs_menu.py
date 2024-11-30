@@ -1,10 +1,35 @@
 import datetime
 import sqlite3
-from stats import date_input_validate
+from stats_menu import date_input_validate
+from supporting_functions import get_current_time, database_path
 
-def get_current_time(): #function to get the current date&time stamp without microseconds
-    return datetime.datetime.now().replace(microsecond=0)
 
+#display logs menu, lets you decide which logs to display or/and add/remove log manually
+def logs_menu():
+    while True:
+        mode = input("""\n>>LOGS MENU<< \n
+        a:          Displays all logs
+        d:          All logs for given day
+        w:          All logs for given week
+        m:          All logs for given month
+        add:        Manually add a log
+        rmv:        Pick and remove a log
+        back:       Back to the main menu\n
+Type the shortcut for the event: """).lower()
+        if mode in ['a', 'd', 'w', 'm']:
+            display_logs(mode)
+        elif mode == 'add':
+            add_log()
+        elif mode == 'rmv':
+            remove_log()
+        elif mode == "back":
+            print('Returning to main menu')
+            break
+        else:
+            print("Incorrect input")
+
+
+#function to display logs for a given period. Uses date_input_validate function
 def display_logs(period):
     if period == 'a':
         filter = ''
@@ -17,13 +42,14 @@ def display_logs(period):
     elif period == 'w':
         input_date = date_input_validate(period)
         filter = f'WHERE week_number = {input_date}'
-        print(f'Displaying all logs week: {input_date}')
+        print(f'Displaying all logs for week: {input_date}')
     elif period == 'm':
         input_date = date_input_validate(period)
         filter = f"WHERE date like '{input_date}%'"
         print(f'Displaying all logs for: {input_date}')
 
-    with sqlite3.connect('clocker.db') as connection:
+#universal connection for all time periods, gives back the logs
+    with sqlite3.connect(database_path) as connection:
         cursor = connection.cursor()
         query = f"""SELECT * FROM logs {filter} ORDER BY datetime ASC"""
         cursor.execute(query)
@@ -35,14 +61,25 @@ def display_logs(period):
         for log in all_logs:
             print(f'{log[0]:<7} {log[1]:<10} {log[2]:<20} {log[3]:<12} {log[4]:<6} {log[5]:<10} {log[6]:<10} {log[7]:20}')
 
-#Function to add a log manually
-def add_log():
+
+#function to add a log manually
+def add_log(): #decision tree for adding a log
     decision = input('Do you want to manually add a log y/n? ').lower()
+    if decision not in ['y', 'n']:
+        print('Invalid decision!')
+        return
     if decision == 'n':
+        print('No logs added')
         return
     while True:
-        log_type = input('Enter log type in/out: ')
+        log_type = input('Enter log type i/o: ')
         if log_type in ['in', 'out']:
+            break
+        elif log_type == 'i':
+            log_type = 'in'
+            break
+        elif log_type == 'o':
+            log_type = 'out'
             break
         else:
             print('Incorrect log type')
@@ -73,7 +110,7 @@ def add_log():
 
     comment = input('Enter comment: ') #entering comment
 
-    with sqlite3.connect('clocker.db') as connection:
+    with sqlite3.connect(database_path) as connection: #combining all as one log into db
         cursor = connection.cursor()
         cursor.execute("""INSERT INTO logs (log_type, datetime, date, week_number, day_of_week, time, comment)
         VALUES (?, ?, ?, ?, ?, ?, ?) """, (log_type, datetime_str, date_str, week_number, day_of_week, time_str, comment))
@@ -81,6 +118,7 @@ def add_log():
         print(f"\nLog: '{log_type} {date_str} week:{week_number} {day_of_week} {time_str} {comment}' saved!")
 
 
+#function to manually remove log with a given id
 def remove_log():
     log_id = input('\nEnter id number of the log to remove or type "back": ')
     if log_id == 'back':
@@ -91,7 +129,9 @@ def remove_log():
         except ValueError:
             print("\nInvalid log id!")
             return
-    with sqlite3.connect('clocker.db') as connection:
+
+#connection to display the chosen log and remove it
+    with sqlite3.connect(database_path) as connection:
         cursor = connection.cursor()
         cursor.execute(("""SELECT * FROM logs WHERE id = ?"""), (log_id,))
         log_to_remove = cursor.fetchone()
@@ -100,6 +140,7 @@ def remove_log():
             return
         decision = input(f'\nDo you want to remove log: {log_to_remove} | y/n ')
         if decision == 'n':
+            print('No logs removed')
             return
         elif decision == 'y':
             cursor.execute(("""DELETE FROM logs WHERE id = ?"""), (log_id,))
@@ -107,27 +148,3 @@ def remove_log():
             print('\nLog removed successfully!')
         else:
             print('\nInvalid decision!')
-
-def logs_menu():
-    while True:
-        mode = input("""\n>>LOGS MENU<< \n
-        a:          Displays all logs
-        d:          All logs for given day
-        w:          All logs for given week
-        m:          All logs for given month
-        add:        Manually add a log
-        remove:     Pick and remove a log
-        back:       Back to the main menu\n
-Type the shortcut for the event: """).lower()
-        if mode in ['a', 'd', 'w', 'm']:
-            display_logs(mode)
-        elif mode == 'add':
-            add_log()
-        elif mode == 'remove':
-            remove_log()
-        elif mode == "back":
-            print('Returning to main menu')
-            break
-        else:
-            print("Incorrect input")
-        

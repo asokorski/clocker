@@ -9,7 +9,7 @@ import os
 
 #to make sure that no matter where the program is executed it will always use the log in the same directory
 script_dir = os.path.dirname(os.path.abspath(__file__)) #gets the directory of the program
-log_path = os.path.join(script_dir, 'log.csv') #concatenates the directory with log name ensuring that path is correct in every OS
+log_path = os.path.join(script_dir, 'clocker_beta.csv') #concatenates the directory with log name ensuring that path is correct in every OS
 
 def get_current_time(): #function to get the current date&time stamp without microseconds
     return datetime.datetime.now().replace(microsecond=0)
