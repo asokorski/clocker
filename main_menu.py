@@ -1,10 +1,12 @@
 import sqlite3
 import os
+from colorama import Fore, Style
 from stats_menu import statistics
 from logs_menu import logs_menu
-from supporting_functions import create_database, get_current_time, last_three_logs, database_path
-from modes import sprint_mode, slow_mode, remove_last_log
+from supporting_functions import create_database, get_current_time, last_three_logs, database_path, app_dir
+from modes import clocking, remove_last_log
 
+print('Clocker v1.0.0 dev Adrian Sokorski')
 
 # First loop to check if the datbase exists, if not, asking to create. Also checks if connection to db works
 while True:
@@ -31,7 +33,7 @@ while True:
 
 # Main menu with dictionary for main functions. Functions s, l and rl are stored in 'modes.py'. stat and log separately
 while True:
-    print("\n>>MAIN MENU<<")
+    print(f"\n{Style.BRIGHT}{Fore.YELLOW}>>>MAIN MENU<<<{Style.RESET_ALL}")
     print(f'Current week: {get_current_time().date().isocalendar()[1]}')
     print(last_three_logs())
     mode = input("""\nChoose mode:
@@ -42,14 +44,14 @@ while True:
     rl:         Remove last log
     exit:       Closes the program \n
 Type the shortcut for the event: """).lower()
-    modes = {
-        's':    sprint_mode, 
-        'l':    slow_mode, 
+    other_modes = {
         'stat': statistics, 
         'log':  logs_menu, 
         'rl':   remove_last_log}
-    if mode in modes:
-        modes[mode]()
+    if mode in ['s', 'l']: #if 's' or 'l' then respective clocking mode
+        clocking(mode)
+    elif mode in ['stat', 'log', 'rl']: #if other modes then respective from dictionary
+        other_modes[mode]()
     elif mode == "exit":
         exit(0)
     else:

@@ -1,13 +1,14 @@
 import datetime
 import sqlite3
+from colorama import Fore, Style
 from stats_menu import date_input_validate
-from supporting_functions import get_current_time, database_path
+from supporting_functions import get_current_time, validate_year, database_path
 
 
 #display logs menu, lets you decide which logs to display or/and add/remove log manually
 def logs_menu():
     while True:
-        mode = input("""\n>>LOGS MENU<< \n
+        mode = input(f"""\n{Style.BRIGHT}{Fore.YELLOW}>>>LOGS MENU<<<{Style.RESET_ALL}\n
         a:          Displays all logs
         d:          All logs for given day
         w:          All logs for given week
@@ -41,8 +42,9 @@ def display_logs(period):
         print(f'Displaying all logs for: {input_date}')
     elif period == 'w':
         input_date = date_input_validate(period)
-        filter = f'WHERE week_number = {input_date}'
-        print(f'Displaying all logs for week: {input_date}')
+        year = validate_year()
+        filter = f"""WHERE week_number = {input_date} AND strftime('%Y', datetime) = '{year}'"""
+        print(f'Displaying all logs for week: {input_date} in {year}')
     elif period == 'm':
         input_date = date_input_validate(period)
         filter = f"WHERE date like '{input_date}%'"
@@ -58,8 +60,15 @@ def display_logs(period):
         print('-' * 100)
         if not all_logs:
             print('No logs found for the entered time period')
+
+
+        previous_log_type = None
         for log in all_logs:
-            print(f'{log[0]:<7} {log[1]:<10} {log[2]:<20} {log[3]:<12} {log[4]:<6} {log[5]:<10} {log[6]:<10} {log[7]:20}')
+            if log[1] == previous_log_type:
+                print(f'{Style.BRIGHT}{Fore.RED}{log[0]:<7} {log[1]:<10} {log[2]:<20} {log[3]:<12} {log[4]:<6} {log[5]:<10} {log[6]:<10} {log[7]:20}{Style.RESET_ALL}')
+            else:
+                print(f'{log[0]:<7} {log[1]:<10} {log[2]:<20} {log[3]:<12} {log[4]:<6} {log[5]:<10} {log[6]:<10} {log[7]:20}')
+                previous_log_type = log[1]
 
 
 #function to add a log manually
@@ -102,7 +111,7 @@ def add_log(): #decision tree for adding a log
         except ValueError:
             print("Incorrect time format!")
 
-    datetime_str = (f'{date} {time}') #combining date and time into datetime
+    datetime_str = (f'{date_str} {time_str}') #combining date and time into datetime
 
     week_number = date_validate.isocalendar()[1] #getting week number from date
 

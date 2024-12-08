@@ -1,12 +1,13 @@
 import datetime
 import sqlite3
-from supporting_functions import get_current_time
+from colorama import Fore, Style
+from supporting_functions import get_current_time, validate_year
 
 
 #menu for displaying statistics
 def statistics():
     while True:
-        decision = input("""\n>>STATISTICS<<\n
+        decision = input(f"""\n{Style.BRIGHT}{Fore.YELLOW}>>>STATISTICS<<<{Style.RESET_ALL}\n
         d:      Total focus time for a given date
         w:      Total focus time for a given week
         m:      Total focus time for a given month
@@ -113,14 +114,15 @@ def total_time(input_date):
 
 #total time calculating for a given week
     elif query_mode == 'week':
+        year = validate_year()
         with sqlite3.connect('clocker.db') as connection:
             cursor = connection.cursor()
             cursor.execute("""SELECT log_type, datetime FROM logs
-            WHERE week_number = (?) ORDER BY datetime""", (time_period,))
+            WHERE week_number = ? AND strftime('%Y', datetime) = ? ORDER BY datetime""", (time_period, year,))
             all_logs_per_date = cursor.fetchall()
 
             if not all_logs_per_date: #in case there are no logs
-                print(f"\nNo logs found for week {time_period}")
+                print(f"\nNo logs found for week {time_period} in {year}")
                 return
             
             total_focus = datetime.timedelta() #to initialize the variable as timedelta
@@ -148,7 +150,7 @@ def total_time(input_date):
                 before_midnight = datetime.datetime.strptime(f"{last_date} 23:59:59", '%Y-%m-%d %H:%M:%S')
                 total_focus += before_midnight - clock_in_time
 
-            time_period = ("week " + str(time_period)) #changing variable for the "Total focus time for (...)" display message
+            time_period = ("week " + str(time_period) + " in " + str(year)) #changing variable for the "Total focus time for (...)" display message
 
 #total time calculating for the given month
     elif query_mode == 'month':
