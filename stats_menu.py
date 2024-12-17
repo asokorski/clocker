@@ -1,7 +1,7 @@
 import datetime
 import sqlite3
 from colorama import Fore, Style
-from supporting_functions import get_current_time, validate_year
+from supporting_functions import get_current_time, validate_year, database_path
 
 
 #menu for displaying statistics
@@ -81,7 +81,7 @@ def total_time(input_date):
         midnight = datetime.datetime.strptime('00:00:00', '%H:%M:%S')
 
 #query execution for logs from a single day
-        with sqlite3.connect('clocker.db') as connection:
+        with sqlite3.connect(database_path) as connection:
             cursor = connection.cursor()
             cursor.execute("""SELECT log_type, time FROM logs
             WHERE date like (?) ORDER BY datetime""", (time_period,))
@@ -115,7 +115,7 @@ def total_time(input_date):
 #total time calculating for a given week
     elif query_mode == 'week':
         year = validate_year()
-        with sqlite3.connect('clocker.db') as connection:
+        with sqlite3.connect(database_path) as connection:
             cursor = connection.cursor()
             cursor.execute("""SELECT log_type, datetime FROM logs
             WHERE week_number = ? AND strftime('%Y', datetime) = ? ORDER BY datetime""", (time_period, year,))
@@ -154,7 +154,7 @@ def total_time(input_date):
 
 #total time calculating for the given month
     elif query_mode == 'month':
-        with sqlite3.connect('clocker.db') as connection:
+        with sqlite3.connect(database_path) as connection:
             cursor = connection.cursor()
             cursor.execute("""SELECT log_type, datetime FROM logs
             WHERE date like (?) ORDER BY datetime""", ((time_period+'%'),))
