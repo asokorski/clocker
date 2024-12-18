@@ -12,8 +12,8 @@ def timer(mode_time, timer_type):
             print((f"{Style.BRIGHT}{Fore.MAGENTA}\r{mode_time}{Style.RESET_ALL}"), end='', flush=True)
             time.sleep(1)
             mode_time -= datetime.timedelta(seconds=1)
-            if mode_time == datetime.timedelta(seconds=0):
-                bell_sound.play()
+            if mode_time < datetime.timedelta(seconds=0):
+                bell_sound().wait_done()
                 if timer_type == 's':
                     print(f'{Style.BRIGHT}{Fore.MAGENTA}\nEnd of sprint! Break time!{Style.RESET_ALL}')
                     break

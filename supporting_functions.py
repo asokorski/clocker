@@ -1,9 +1,7 @@
 import datetime
 import sqlite3
 import os
-import atexit
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1" #to disable a welcome message from pygame community
-import pygame
+import simpleaudio
 from colorama import Fore, Style
 
 
@@ -12,11 +10,10 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 database_path = os.path.join(app_dir, 'clocker.db') #makes sure path is correct in any OS
 
 
-# To initaliaze the sound for timer and ensure it cleans up the memory whenever/however the program is closed:
-sound_path = os.path.join(app_dir, 'bell.mp3')
-pygame.mixer.init()
-bell_sound = pygame.mixer.Sound(sound_path)
-atexit.register(pygame.mixer.quit)
+#to get the sound of a bell
+sound_path = os.path.join(app_dir, 'bell.wav')
+bell = simpleaudio.WaveObject.from_wave_file(sound_path)
+bell_sound = bell.play #this to be used whenever needed, just add "()"" to variable
 
 
 def get_current_time(): #function to get the current date&time stamp without microseconds
